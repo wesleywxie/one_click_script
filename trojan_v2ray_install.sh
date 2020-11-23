@@ -499,7 +499,7 @@ EOF
     rm -rf ${configWebsitePath}/*
     mkdir -p ${configWebsiteDownloadPath}
 
-    downloadAndUnzip "https://github.com/jinwyp/one_click_script/raw/master/download/website.zip" "${configWebsitePath}" "website.zip"
+    downloadAndUnzip "https://github.com/wesleywxie/one_click_script/raw/master/download/website.zip" "${configWebsitePath}" "website.zip"
     
     ${sudoCmd} systemctl start nginx.service
 
