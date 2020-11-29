@@ -275,6 +275,7 @@ downloadFilenameTrojanWeb="trojan"
 promptInfoTrojanName=""
 isTrojanGo="no"
 isTrojanGoSupportWebsocket="false"
+isInstallNginx="true"
 #configTrojanGoWebSocketPath=$(cat /dev/urandom | head -1 | md5sum | head -c 8)
 configTrojanGoWebSocketPath="hexo/"
 configTrojanPasswordPrefixInput="jin"
@@ -550,40 +551,44 @@ function installTrojanWholeProcess(){
     stopServiceNginx
     testLinuxPortUsage
 
-    green " ================================================== "
-    yellow " 请输入绑定到本VPS的域名 例如www.xxx.com: (此步骤请关闭CDN后安装)"
-    if [[ $1 == "repair" ]] ; then
-        blue " 务必与之前安装失败时使用的域名一致"
-    fi
-    green " ================================================== "
-
-    read configSSLDomain
-    if compareRealIpWithLocalIp "${configSSLDomain}" ; then
-
-        if [[ -z $1 ]] ; then
-            installWebServerNginx
-            getHTTPSCertificate
-        else
-            getHTTPSCertificate "standalone"
+    if [ "$isInstallNginx" = "true" ] ; then
+        green " ================================================== "
+        yellow " 请输入绑定到本VPS的域名 例如www.xxx.com: (此步骤请关闭CDN后安装)"
+        if [[ $1 == "repair" ]] ; then
+            blue " 务必与之前安装失败时使用的域名一致"
         fi
+        green " ================================================== "
 
-        if test -s ${configSSLCertPath}/fullchain.cer; then
-            green " ================================================== "
-            green "     SSL证书获取成功!"
-            green " ================================================== "
-            installTrojanServer
+        read configSSLDomain
+        if compareRealIpWithLocalIp "${configSSLDomain}" ; then
+
+            if [[ -z $1 ]] ; then
+                installWebServerNginx
+                getHTTPSCertificate
+            else
+                getHTTPSCertificate "standalone"
+            fi
+
+            if test -s ${configSSLCertPath}/fullchain.cer; then
+                green " ================================================== "
+                green "     SSL证书获取成功!"
+                green " ================================================== "
+                installTrojanServer
+            else
+                red "==================================="
+                red " https证书没有申请成功，安装失败!"
+                red " 请检查域名和DNS是否生效, 同一域名请不要一天内多次申请!"
+                red " 请检查80和443端口是否开启, VPS服务商可能需要添加额外防火墙规则，例如阿里云、谷歌云等!"
+                red " 重启VPS, 重新执行脚本, 可重新选择修复证书选项再次申请证书 ! "
+                red " 可参考 https://www.v2rayssr.com/trojan-2.html "
+                red "==================================="
+                exit
+            fi
         else
-            red "==================================="
-            red " https证书没有申请成功，安装失败!"
-            red " 请检查域名和DNS是否生效, 同一域名请不要一天内多次申请!"
-            red " 请检查80和443端口是否开启, VPS服务商可能需要添加额外防火墙规则，例如阿里云、谷歌云等!"
-            red " 重启VPS, 重新执行脚本, 可重新选择修复证书选项再次申请证书 ! "
-            red " 可参考 https://www.v2rayssr.com/trojan-2.html "
-            red "==================================="
             exit
         fi
     else
-        exit
+        installTrojanServer
     fi
 }
 
@@ -878,8 +883,9 @@ function start_menu(){
     green " 2. 修复证书 并继续安装 trojan-go 不支持CDN, 不开启websocket"
     green " 3. 安装 trojan-go 和 nginx 支持CDN, 开启websocket (不兼容trojan客户端)"
     green " 4. 修复证书 并继续安装 trojan-go 支持CDN, 开启websocket "
-    green " 5. 升级 trojan-go 到最新版本"
-    red " 6. 卸载 trojan-go 与 nginx"
+    green " 5. 安装 trojan-go 开启websocket (不兼容trojan客户端)"
+    green " 6. 升级 trojan-go 到最新版本"
+    red " 7. 卸载 trojan-go 与 nginx"
     echo
     green " 0. 退出脚本"
     echo
@@ -905,9 +911,15 @@ function start_menu(){
         ;;
         5 )
             isTrojanGo="yes"
-            upgradeTrojan
+            isTrojanGoSupportWebsocket="true"
+            isInstallNginx="false"
+            installTrojanWholeProcess
         ;;
         6 )
+            isTrojanGo="yes"
+            upgradeTrojan
+        ;;
+        7 )
             isTrojanGo="yes"
             removeNginx
             removeTrojan
